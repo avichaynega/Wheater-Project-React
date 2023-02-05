@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import './MyApp.css';
 import LineChart from "./components/LineChart";
+// import winston from 'winston';
+
+
 
 function MyApp() {
   const [countryState, setCountry] = useState(undefined);
@@ -12,6 +15,11 @@ function MyApp() {
   const [humidity, setHumidity] = useState(null);
   const [points, setpoints] = useState(null);
 
+  // const logger = winston.createLogger({
+  //   transports:[
+  //     new winston.transports.File({filename:'/opt/log/www2/error.log',level:'error'})
+  //   ]
+  // });
 
 
   // useEffect(() => {
@@ -58,6 +66,7 @@ function MyApp() {
 
         }
         setpoints(point);
+        console.log(point);
 
       }
       else {
@@ -65,9 +74,11 @@ function MyApp() {
       }
       console.log(result);
 
+
     }
     catch (error) {
       console.error(error.messaage);
+
 
     }
 
@@ -99,6 +110,7 @@ function MyApp() {
             <h4>temperture</h4>
             <h4>humidity</h4>
             <LineChart lables={Object.keys(data)} datas={Object.values(data)} />
+            {/* <LineChart /> */}
           </div>
         })}
 
