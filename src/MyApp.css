@@ -19,12 +19,9 @@
 .Row {
   display: table;
   width: 100%;
-  /*Optional*/
   table-layout: fixed;
-  /*Optional*/
   border-spacing: 10px;
-  /*Optional*/
-  background-color: lightgray;
+  background-color: rgb(211, 211, 211,0.4);
 }
 
 .Column {
