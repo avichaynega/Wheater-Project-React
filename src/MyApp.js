@@ -1,34 +1,82 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import './MyApp.css';
 import LineChart from "./components/LineChart";
+import Column from './components/Column';
+import WeatherDetails from './components/WeatherDetails';
+
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 
 
 
 
 function MyApp() {
+  const [isGps, setGps] = useState(false);
   const [cityState, setCity] = useState(undefined);
   const [Country, setCountry] = useState(null);
   const [fCity, setfCity] = useState(null);
   const [points, setpoints] = useState(null);
-  const [lineChart, setlineChart] = useState(null);
-  const [currentWheater, setcurrentWheater] = useState(null);
-  const [columnstyle, setColumnStyle] = useState(0);
+  const [imageIndex, setImageIndex] = useState(0);
   const [clientPosition, setClientPosition] = useState(null);
   const [weekDays, setWeekDays] = useState(null);
   const imgUrl = 'http://openweathermap.org/img/wn/';
-  const timeFormat = { hour12: false, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' };
-  const formattedDate = new Date().toLocaleString('en-US', timeFormat);
+
+  const timeFormat = {
+    hour12: false,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric'
+  };
+  const nowTime = new Date().toLocaleString('en-US', timeFormat);
+  const [dateTime, setDateTime] = useState(nowTime);
   const apiKey = process.env.REACT_APP_API_KEY;
 
+  // Fix Leaflet icon issue
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl,
+    iconUrl,
+    shadowUrl,
+  });
 
+  useEffect(() => {
+    if (clientPosition && isGps) {
+      var lat = clientPosition.lat;
+      var lng = clientPosition.lon;
+      var url = `http://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&appid=${apiKey}`;
+      handleOnSubmit(url);
+    }
+    const handleLoad = () => {
+      navigator.geolocation.getCurrentPosition(position => {
+        setGps(true);
+        setClientPosition({
+          lat: position.coords.latitude,
+          lon: position.coords.longitude
+        });
+      });
+    }
+    window.addEventListener('load', handleLoad);
+
+    return () => {
+      window.removeEventListener('load', handleLoad);
+    }
+  }, [clientPosition]);
 
 
 
   const handleOnSubmit = useCallback(async (event) => {
     var url = '';
+    setGps(false);
     if (event.preventDefault) {
-      setClientPosition(null);
+
       event.preventDefault();
       url = `https://api.openweathermap.org/data/2.5/forecast?q=${cityState}&units=metric&appid=${apiKey}`;
     }
@@ -42,10 +90,12 @@ function MyApp() {
       if (result.cod === '200') {
         setfCity(result.city.name);
         setCountry(result.city.country);
+        setClientPosition(result.city.coord);
         var point = {};
-        for (let i = 0; i < result.list.length; i++) {
+        var currentDateTime = new Date();
 
-          var dateTime = result.list[i].dt_txt.split(' ');
+        result.list.forEach(element => {
+          var dateTime = element.dt_txt.split(' ');
           var date = dateTime[0];
           var time = dateTime[1];
 
@@ -53,42 +103,43 @@ function MyApp() {
             point[date] = {
               temp: [],
               time: [],
-              wheather: result.list[i].weather[0].main,
-              icon: result.list[i].weather[0].icon,
-              wind: result.list[i].wind.speed,
-              humidity: result.list[i].main.humidity,
-              maxtemp: result.list[i].main.temp_max
+              wheather: element.weather[0].main,
+              icon: element.weather[0].icon,
+              wind: element.wind.speed,
+              humidity: element.main.humidity,
+              maxtemp: element.main.temp_max
             };
           }
 
-          point[date].temp.push(result.list[i].main.temp);
+          point[date].temp.push(element.main.temp);
           point[date].time.push(time.substring(0, time.length - 3));
-          var currentDateTime = new Date();
+          
           var currentHour = currentDateTime.getHours();
           var t = Number(time.substring(0, 2));
           if (currentHour % 3 === 0) {
             if (t === currentHour) {
-              point[date].icon = result.list[i].weather[0].icon;
+              point[date].icon = element.weather[0].icon;
             }
           }
           else {
             if ((currentHour + 1) % 3 === 0) {
               if (t === currentHour + 1) {
-                point[date].icon = result.list[i].weather[0].icon;
+                point[date].icon = element.weather[0].icon;
               }
             }
             else {
               if ((currentHour - 1) === t) {
-                point[date].icon = result.list[i].weather[0].icon;
+                point[date].icon = element.weather[0].icon;
               }
             }
           }
-        }
+        });
         setpoints(point);
 
       }
       else {
-        throw new Error(`failed with error code: ${result.code}`);
+        console.error(`failed with error code: ${result}`);
+        alert('city not found');
       }
     }
     catch (error) {
@@ -98,29 +149,9 @@ function MyApp() {
 
     setWeekDays(weekDays);
 
-  }, [cityState]);
+  }, [cityState, clientPosition]);
 
-  useEffect(() => {
-    if (clientPosition) {
-      var lat = clientPosition.lat;
-      var lng = clientPosition.lng;
-      var url = `http://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lng}&units=metric&appid=${apiKey}`;
-      handleOnSubmit(url);
-    }
-    const handleLoad = () => {
-      navigator.geolocation.getCurrentPosition(position => {
-        setClientPosition({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
-      });
-    }
-    window.addEventListener('load', handleLoad);
 
-    return () => {
-      window.removeEventListener('load', handleLoad);
-    }
-  }, [clientPosition, handleOnSubmit]);
   const getWeekDays = (currentDateTime) => {
     var baseDate = currentDateTime;
     baseDate.setDate(baseDate.getDate() + 1);
@@ -135,34 +166,20 @@ function MyApp() {
   const handleOnCityChange = (event) => {
     setCity(event.target.value);
   }
+
   const handleOnClickDay = (index) => {
     let pointsValues = Object.values(points)[index];
     let pointsKeys = Object.keys(points)[index];
-    const sTime = pointsKeys + 'T' + pointsValues.time[0];
-    const dateTime = new Date(sTime).toLocaleString('en-US', timeFormat);
 
-    setlineChart(<LineChart lables={pointsValues.time} datas={pointsValues.temp} date={pointsKeys} />);
-    var currwheater = <div className='TodayWeather'>
-      <div>{fCity},{Country}</div>
-      <div className='date'>{dateTime}</div>
-      <div className='icontemp'>
-        <img className='sidebyside' src={`${imgUrl}${pointsValues.icon}@2x.png`} alt="Weather icon" />
-        <div className='sidebyside'>{pointsValues.maxtemp}&#8451;</div>
-      </div>
-      <div className='state'>{pointsValues.wheather}</div>
-      <div className='windhumidityContainer'>
-        <div className='sidebyside'>
-          <div className='upandown'>wind speed</div>
-          <div className='upandown'>{pointsValues.wind} km/j</div>
-        </div>
-        <div className='sidebyside'>
-          <div className='upandown'>humidity</div>
-          <div className='upandown'>{pointsValues.humidity}%</div>
-        </div>
-      </div>
-    </div>;
-    setcurrentWheater(currwheater);
-    setColumnStyle(index);
+    if (index === 0) {//first button image
+      setDateTime(nowTime);
+    }
+    else {
+      let timeArrSize = pointsValues.time.length;
+      const sTime = pointsKeys + 'T' + pointsValues.time[timeArrSize / 2];
+      setDateTime(new Date(sTime).toLocaleString('en-US', timeFormat));
+    }
+    setImageIndex(index);
   }
 
   return (
@@ -178,45 +195,50 @@ function MyApp() {
       {points &&
         <div className='ButtomContainer'>
           <div className='LeftContainer'>
-            {currentWheater || <div className='TodayWeather'>
-              <div>{fCity},{Country}</div>
-              <div className='date'>{formattedDate}</div>
-              <div className='icontemp'>
-                <img className='sidebyside' src={`${imgUrl}${Object.values(points)[0].icon}@2x.png`} alt="Weather icon" />
-                <div className='sidebyside'>{Object.values(points)[0].maxtemp}&#8451;</div>
+            <div className='TodayColumn'>
+              <div className='TodayRow'>
+                <WeatherDetails
+                  city={fCity}
+                  country={Country}
+                  pointsValues={Object.values(points)[imageIndex]}
+                  imgUrl={imgUrl}
+                  dateTime={dateTime}
+                />
               </div>
-              <div className='state'>{Object.values(points)[0].wheather}</div>
-              <div className='windhumidityContainer'>
-                <div className='sidebyside'>
-                  <div className='upandown'>wind speed</div>
-                  <div className='upandown'>{Object.values(points)[0].wind} km/j</div>
-                </div>
-                <div className='sidebyside'>
-                  <div className='upandown'>humidity</div>
-                  <div className='upandown'>{Object.values(points)[0].humidity}%</div>
-                </div>
+              <div className='TodayRow'>
+                <MapContainer key={clientPosition.lat} center={[clientPosition.lat, clientPosition.lon]} zoom={10} scrollWheelZoom={false}>
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+
+                  />
+                  <Marker position={[clientPosition.lat, clientPosition.lon]} />
+                </MapContainer>
               </div>
             </div>
-            }
           </div>
 
           <div className='RightContainer'>
             <div className='Graph'>
-              {lineChart ||
-                < LineChart lables={Object.values(points)[0].time} datas={Object.values(points)[0].temp} date={Object.keys(points)[0]} />
-              }
+              < LineChart
+                lables={Object.values(points)[imageIndex].time}
+                datas={Object.values(points)[imageIndex].temp}
+                date={Object.keys(points)[imageIndex]}
+              />
             </div>
             <div className="Row">
-
               {Object.entries(points).map((value, index) => {
                 return (
-                  <div className="Column" style={index === columnstyle ? { border: "5px blue solid" } : null} key={index} onClick={() => handleOnClickDay(index)} >
-                    <div>{weekDays[index]}</div>
-                    <img className='colimg' src={`http://openweathermap.org/img/wn/${value[1].icon}@2x.png`} alt="Weather icon" />
-                    <div>humidity</div>
-                    <div>{value[1].humidity}%</div>
-                  </div>)
-
+                  <Column
+                    index={index}
+                    weekDays={weekDays}
+                    value={value}
+                    imgUrl={imgUrl}
+                    columnstyle={imageIndex}
+                    handleOnClickDay={handleOnClickDay}
+                    key={index}
+                  />
+                )
               })}
             </div>
           </div>

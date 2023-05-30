@@ -3,6 +3,11 @@
   flex-direction: column;
   padding: 15px;
 }
+.leaflet-container {
+  height: 21vh;
+  width: 45vw;
+  border: 4px black solid ;
+}
 
 .LeftContainer {
   width: 50%;
@@ -23,6 +28,13 @@
   border-spacing: 10px;
   background-color: rgb(211, 211, 211,0.4);
 }
+.TodayRow {
+  display: table;
+  width: 100%;
+  height: 100%;
+  table-layout: fixed;
+  border-spacing: 10px;
+}
 
 .Column {
   padding: 10px;
@@ -31,23 +43,26 @@
   border: 2px white solid;
   border-radius: 10px;
 }
+.TodayColumn {
+  padding: 10px;
+  text-align: center;
+  display: table-cell;
+  /* border: 2px white solid; */
+  border-radius: 10px;
+  vertical-align: middle;
+}
 
 .Column:hover {
   border: 5px blue solid;
 }
 
 .TodayWeather {
-  text-align: center;
-  padding: 20px;
-  font-size: 40px;
-  display: flex;
-  flex-direction: column;
-  align-content: center;
-  flex-wrap: wrap;
+  font-size: 20px;
+  background-color: rgb(211, 211, 211,0.4);
 }
 
 .sidebyside {
-  padding: 1rem 1rem;
+  padding: 1rem 5rem;
   display: inline-block;
   vertical-align: middle;
 }
@@ -84,6 +99,7 @@ html {
   background-size: cover;
   background-repeat: no-repeat;
   height: 100%;
+  width: 100%;
 }
 
 .colimg {
